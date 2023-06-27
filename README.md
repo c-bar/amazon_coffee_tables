@@ -1,7 +1,7 @@
-# amazon_coffeet_ables
+# amazon_coffee_tables
 Analysis of coffee table products on Amazon
 
-This is my capstone project for the Google Data Analytics Certification. I analyzed over 700 coffee table products on Amazon to identify factors associated with high revenue. I collected the data from Helium10 Xray, a popular business analytics tool used by Amazon sellers which (among many things) provides sales and revenue prediction on Amazon products.
+This is my capstone project for the Google Data Analytics Professional Certificate. I analyzed over 700 coffee table products on Amazon to identify factors associated with high revenue. I collected the data from Helium10 Xray, a popular business analytics tool used by Amazon sellers which (among many things) provides sales and revenue prediction on Amazon products.
 
 -----
 data_cleaning.Rmd
