@@ -1,42 +1,64 @@
 ---
-title: 'Report 1'
+title: "Report 1"
 author: "Barbara Chen"
 date: "2023-06-08"
+output:
+  html_document:
+    df_print: paged
 editor_options:
   markdown:
     wrap: 72
 ---
-This report will analyze the distribution of prices, sales, and revenue of 700 coffee table-related products on Amazon. The keywords used to gather these products are "_coffee table, nightstand, side table, end table, bedside table, sofa table, living room table, and accent table_". 
 
-The top 120 listings for each results were gathered from Helium10 Xray, which among many things, provided the sales and revenue estimations for each product. Because revenue is only an estimation from Helium10, it is not 100% reliable. This should be kept in mind for the rest of the analysis.
+This report will analyze the distribution of prices, sales, and revenue
+of 700 coffee table-related products on Amazon. The keywords used to
+gather these products are "*coffee table, nightstand, side table, end
+table, bedside table, sofa table, living room table, and accent table*".
 
-The sponsored posts were removed. Duplicated listings (products which showed up for different search terms) were also removed.
+The top 120 listings for each results were gathered from Helium10 Xray,
+which among many things, provided the sales and revenue estimations for
+each product. Because revenue is only an estimation from Helium10, it is
+not 100% reliable. This should be kept in mind for the rest of the
+analysis.
 
-74 items did not have sales and revenue estimations, so those products were left out in the analyses related to sales and revenue.
+The sponsored posts were removed. Duplicated listings (products which
+showed up for different search terms) were also removed.
 
-The goal is to determine if there is any correlation between price, sales, and revenue.
+74 items did not have sales and revenue estimations, so those products
+were left out in the analyses related to sales and revenue.
+
+The goal is to determine if there is any correlation between price,
+sales, and revenue.
 
 ## Conclusion
 
-1. There is no strong correlation between prices and sales, and prices and revenue. 
+1.  There is no strong correlation between prices and sales, and prices
+    and revenue.
 
 #### Revenue
-1. 10% of the products generated much higher revenue ( > \$100,000) compared to the rest.
-2. 75% of the products generated less than \$56,000.
-5. 25% of the products generated less than \$11,000.
+
+1.  10% of the products generated much higher revenue ( \> \$100,000)
+    compared to the rest.
+2.  75% of the products generated less than \$56,000.
+3.  25% of the products generated less than \$11,000.
 
 #### Price
-1. 98% of the products are less than \$300. Anything more than that generated low revenue.
-2. Prices over \$160 could be considered too high,
-3. 75% of the products are less than \$90. The market for cheaper products (< \$90) could be really competitive.
 
+1.  98% of the products are less than \$300. Anything more than that
+    generated low revenue.
+2.  Prices over \$160 could be considered too high,
+3.  75% of the products are less than \$90. The market for cheaper
+    products (\< \$90) could be really competitive.
 
 ### Recommendations (for now...)
-1. Price of \$160 is considered very high compared with all the products (could be risky to have a product in this range).
-2. If aiming for mid-high prices, \$90~\$160 could be a good range. The products in this price range were *slightly* more likely to generate higher revenue. Moreover, there is less competition in this price range.
-3. If aiming for mid-low prices (<\$90), expect more competition.
 
-
+1.  Price of \$160 is considered very high compared with all the
+    products (could be risky to have a product in this range).
+2.  If aiming for mid-high prices, \$90\~\$160 could be a good range.
+    The products in this price range were *slightly* more likely to
+    generate higher revenue. Moreover, there is less competition in this
+    price range.
+3.  If aiming for mid-low prices (\<\$90), expect more competition.
 
 ```{r include = FALSE}
 knitr::opts_chunk$set(echo = FALSE)
@@ -95,7 +117,7 @@ ggplot(data = psr_df) +
 ```
 
 Again, we see a cluster in the lower left corner. We will zoom in to
-price < $ 450 and revenue  < \$250,000.
+price \< \$ 450 and revenue \< \$250,000.
 
 ```{r warning=FALSE}
 ggplot(data = psr_df) +
@@ -109,8 +131,8 @@ ggplot(data = psr_df) +
   labs(title = "Sales vs. Revenue")
 ```
 
-
-The following will be the ranges we look at for the next part of the analysis.
+The following will be the ranges we look at for the next part of the
+analysis.
 
 1.  Price \< \$450
 2.  Sales \< 10,000
@@ -127,10 +149,11 @@ round(cor(psr_df %>% filter(!is.na(sales)) %>% select(price, sales, revenue)),
 )
 ```
 
-1. There is virtually no relationships between
-price and sales (-0.06), and price and revenue (-0.06). 
+1.  There is virtually no relationships between price and sales (-0.06),
+    and price and revenue (-0.06).
 
-2. There is a high correlation between sales and revenue (0.78), which is expected since high sales leads to high revenue.
+2.  There is a high correlation between sales and revenue (0.78), which
+    is expected since high sales leads to high revenue.
 
 ## 1. Revenue Distribution
 
@@ -151,7 +174,7 @@ ggplot(data = rev_df) +
 
 Again, we can see quite a few extremes (\>250000)
 
-**Records for which revenue > \$ 25000 will be removed (13 products).**
+**Records for which revenue \> \$ 25000 will be removed (13 products).**
 They will be examine in more detail later along with actual outliers.
 
 ```{r}
@@ -188,15 +211,15 @@ rq
 
 #### Observations
 
-1.  50% of the products generate less than $23,300.
-2.  The majority of the products (75%) make less than $56,000.
+1.  50% of the products generate less than \$23,300.
+2.  The majority of the products (75%) make less than \$56,000.
 
-* Later, we will group the products based on their revenue quartile.
+-   Later, we will group the products based on their revenue quartile.
 
 ### 1.2 Revenue Outliers
 
-We see that revenue above \$ 124,388 would be considered
-outliers. Let's look at them in more detail.
+We see that revenue above \$ 124,388 would be considered outliers. Let's
+look at them in more detail.
 
 ```{r}
 r_out <- rq[4] + 1.5 * (rq[4]-rq[2])
@@ -222,7 +245,7 @@ ggplot(data = rev_df %>% filter(revenue > r_out)) +
 #### Observations
 
 1.  We see a wide range of prices for products with extremely high
-    revenue (up to $280).
+    revenue (up to \$280).
 2.  Most of the products here is still priced lower than \$ 150 (low
     price + high sales = high revenue)
 
@@ -241,7 +264,7 @@ ggplot(data = prices_df) +
 From this, we can clearly see some extreme values ( price \> \$ 450). We
 will go ahead and filter that out.
 
-**Products for which price > \$ 450 will be removed (12 products).**
+**Products for which price \> \$ 450 will be removed (12 products).**
 These will be examined in more detail later along with actual outliers.
 
 ```{r}
@@ -309,14 +332,17 @@ ggplot(data = prices_df %>% filter(price < 1000 & price > p_out)) +
 
 #### Observations
 
-1. Products with price \> \$1000 have extremely low revenue. In other
+1.  Products with price \> \$1000 have extremely low revenue. In other
     words, avoid listing products above \$1000.
-2. Products with price ranging from \$350 ~ \$550 have relatively lower revenue.
-3. Products with price < \$350 ~ \$550 have varying levels of revenue.
+2.  Products with price ranging from \$350 \~ \$550 have relatively
+    lower revenue.
+3.  Products with price \< \$350 \~ \$550 have varying levels of
+    revenue.
 
 ## 3. Sales Distribution
 
-74 products were missing sales information, so those products will not be included in this part of the analysis.
+74 products were missing sales information, so those products will not
+be included in this part of the analysis.
 
 ```{r}
 sales_df <- psr_df %>% filter(!is.na(sales))
@@ -385,20 +411,20 @@ ggplot(data = sales_df %>% filter(sales > s_out)) +
   labs(title = "Price vs. Sales (Sales Outliers)")
 ```
 
-
 ### 3.3 Observations
-1. We see a wide range of prices (all the way up to \$
-140). This shows that high price does not necessarily mean low sales. In
-fact, the higher priced items generate higher revenue despite lower
-sales.
-2. The products with the *highest* sales (\> 10,000) were all priced under \$
-50.
+
+1.  We see a wide range of prices (all the way up to \$ 140). This shows
+    that high price does not necessarily mean low sales. In fact, the
+    higher priced items generate higher revenue despite lower sales.
+2.  The products with the *highest* sales (\> 10,000) were all priced
+    under \$
+3.  
 
 ## 4. Price, Sales, Revenue
 
 Now, we will examine the relationship between prices, sales and revenue.
-We will filter out price \> \$ 1000 since these products generate insignificant revenue.
-
+We will filter out price \> \$ 1000 since these products generate
+insignificant revenue.
 
 ```{r}
 ggplot(data = rev_df %>% filter(price < 300 & sales < 10000)) +
@@ -409,11 +435,13 @@ ggplot(data = rev_df %>% filter(price < 300 & sales < 10000)) +
 
   labs(title = "Price, Sales, Revenue")
 ```
-#### Observation
-1. As we already know, high sales = high revenue
-2. ALSO: low sales **+ higher price** = high revenue.
-3. We see that while products over \$100 have lower number of sales, they still generate relatively high revenue.
 
+#### Observation
+
+1.  As we already know, high sales = high revenue
+2.  ALSO: low sales **+ higher price** = high revenue.
+3.  We see that while products over \$100 have lower number of sales,
+    they still generate relatively high revenue.
 
 ### 4.1 Price vs. Revenue
 
@@ -432,19 +460,20 @@ ggplot(data = rev_df %>% filter(price < 1000)) +
 1.  There is a clear cluster in terms of product price. The first
     cluster is less than \$100, and the second is between \$100 and
     \$300.
-2.  Products more than \$300 tend to have relatively low revenue
-    (with a couple exceptions).
+2.  Products more than \$300 tend to have relatively low revenue (with a
+    couple exceptions).
 3.  If we just look at the top 25% revenue, we also see more products
     less than \$100.
 
 ## 5. Price Groups
 
 Earlier, we identified two clusters of price ranges. Based on the
-natural clustering and the quantiles, I decided to define three price ranges. 
+natural clustering and the quantiles, I decided to define three price
+ranges.
 
 The lower price range is around \$0 to \$90. (lower 75% of the products)
-The second price range is around \$90 dollars to \$160. 
-The third range is \$160 and above. (outliers)
+The second price range is around \$90 dollars to \$160. The third range
+is \$160 and above. (outliers)
 
 Let's examine each of these groups.
 
@@ -474,7 +503,9 @@ ggplot(price_groups, aes(price_group, fill = price_group)) + geom_bar(show.legen
   scale_y_continuous(breaks = scales::pretty_breaks(n=10)) +
   geom_text(stat='count', aes(label=..count..), vjust=-0.3)
 ```
+
 Note that group 1 represents 75% of the data.
+
 ```{r warning=FALSE}
 ggplot(data = price_groups, aes(x = price_group, y = revenue, fill = price_group)) + 
   geom_boxplot(outlier.shape=8, show.legend = FALSE) + 
@@ -485,8 +516,11 @@ ggplot(data = price_groups, aes(x = price_group, y = revenue, fill = price_group
 ```
 
 #### Observations
-1. By comparing the revenue of different groups, more products in group 2 (\$90 \~ \$160) generate higher revenue.
-2. Top 25% of the products in group 2 generated more than \$73,000 (compared to the overall 25% - \$56,000).
+
+1.  By comparing the revenue of different groups, more products in group
+    2 (\$90 \~ \$160) generate higher revenue.
+2.  Top 25% of the products in group 2 generated more than \$73,000
+    (compared to the overall 25% - \$56,000).
 
 ```{r}
 # price_groups %>% filter(!is.na(revenue)) %>% group_by(price_group) %>% 
@@ -502,10 +536,10 @@ ggplot(data = price_groups, aes(x = price_group, y = revenue, fill = price_group
 
 We will analyze in terms of revenue quartiles:
 
-1. q1: <\$11,159 (lowest revenue group)
-2. q2: \$11,159 ~ \$23,319 
-3. q3: \$23,319 \~ \$56,450 
-4. q4: \> \$56,450 (highest revenue group)
+1.  q1: \<\$11,159 (lowest revenue group)
+2.  q2: \$11,159 \~ \$23,319
+3.  q3: \$23,319 \~ \$56,450
+4.  q4: \> \$56,450 (highest revenue group)
 
 ```{r}
 rev_groups <- price_groups %>% filter(!is.na(revenue)) %>% 
@@ -537,10 +571,12 @@ ggplot(data = rev_groups %>% filter(price < 1000), aes(x = rev_group, y=price, f
 
 ```
 
-
 #### Observations
-1. Higher revenue groups (q4, q3, and q2) have *slightly* more products above \$90 compared to the lowest revenue groups (q1).
-2. q3 and q2 have similar distribution.
-3. Products less than \$90 are almost equally likely to be in any revenue group.
-4. Products above \$90 are a little more likely to be in the higher revenue groups (q2, q3, q4)
 
+1.  Higher revenue groups (q4, q3, and q2) have *slightly* more products
+    above \$90 compared to the lowest revenue groups (q1).
+2.  q3 and q2 have similar distribution.
+3.  Products less than \$90 are almost equally likely to be in any
+    revenue group.
+4.  Products above \$90 are a little more likely to be in the higher
+    revenue groups (q2, q3, q4)
