@@ -1,0 +1,185 @@
+---
+title: "Data Cleaning"
+author: "Barbara Chen"
+date: "2023-06-02"
+---
+```{r include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Part I: Setting up
+This part will create the data frames of the data sets used and show an overview of the data I will be working with.
+
+There are 10 data sets total, one for each search term. These datasets will be stored in a list called `data`. 
+
+## Load Libraries
+
+```{r load libraries, results='hide'}
+library(tidyverse)
+library(janitor)
+library(here)
+library(lubridate)
+library(dplyr)
+```
+
+
+## Load Data
+```{r load data, results='hide'}
+curr_path <- here()
+
+df_names <- c("accent_table",
+                "bedside_table", 
+                "coffee_table",
+                "end_table",
+                "living_room_table",
+                "nightstand",
+                "side_table",
+                "sofa_table")
+
+paths <- vector("character", length(df_names))
+
+for (i in 1:length(df_names)) {
+  paths[i] = paste0(curr_path, "/data/raw_data/", df_names[i], ".csv")
+}
+
+# store the data frames into a list
+data <- list()
+data <- lapply(paths, read_csv)
+
+names(data) <- df_names
+```
+
+
+## Data overview
+
+`data` stores the data frames of the 10 files read.
+
+```{r}
+names(data)
+```
+
+
+Each data frame has and 23 columns and around 120 observations. We will be using `accent_table` to show the overview of the data.
+```{r glimpse}
+glimpse(data$accent_table)
+```
+
+```{r columns}
+colnames(data$accent_table)
+```
+First 6 rows of `accent_table`.
+```{r head}
+head(data$accent_table)
+```
+## Part II: Cleaning data
+
+This part will do some pre-cleaning of the data. In particular:
+1. Replace n/a with NA keyword
+2. Clean column names
+2. Convert numerical data to numeric type
+
+```{r replace n/a, results = 'hide'}
+# n/a -> NA
+cleaned <- data
+for (i in 1:length(data)) {
+  cleaned[[i]][cleaned[[i]]== 'n/a'] <- NA
+}
+
+# clean column names
+cleaned <- lapply(cleaned, clean_names)
+
+
+# Correct sales and revenue, bsr, fees, ratings, weight, creation date
+for (i in 1:length(data)) {
+  # format currency to get rid of comma mark
+  cleaned[[i]]$sales <- as.numeric(gsub(cleaned[[i]]$sales, pattern = ',', replacement=''))
+  cleaned[[i]]$revenue <- as.numeric(gsub(cleaned[[i]]$revenue, pattern = ',', replacement=''))
+  cleaned[[i]]$fees <- as.numeric(gsub(cleaned[[i]]$fees, pattern = ',', replacement=''))
+  cleaned[[i]]$bsr <- as.numeric(gsub(cleaned[[i]]$bsr, pattern = ',', replacement=''))
+
+  cleaned[[i]]$ratings <- as.numeric(cleaned[[i]]$ratings)
+  cleaned[[i]]$images <- as.numeric(cleaned[[i]]$images)
+
+  # format date
+  cleaned[[i]]$creation_date <- mdy(cleaned[[i]]$creation_date)
+
+}
+
+# View(cleaned)
+
+```
+
+Check the data types of the columns
+```{r}
+glimpse(cleaned$accent_table)
+```
+
+# Part III: Organizing data
+
+In this part, we will organize the data to focus more on what we're interested in -- revenue, sales, prices, etc. 
+1. Remove sponsored listings.
+2. Create a master data by concatenating all data frames and remove all duplicate records.
+3. Remove necessary columns (e.g. image_url)
+
+
+### 1. Remove sponsored listings.
+After this point, sponsored listings will not be included in the data unless stated otherwise.
+
+```{r remove sponsored listings}
+new_data <- lapply(cleaned, function(df) {
+  df <- filter(df, substr(df$product_details, 1, 3) != "($)")
+})
+
+```
+
+### 2. Remove irrelevant listings.
+The listings with the following ASIN were not what we are interested in, so they will be filtered out. These products included mirrored lights, books, or electronics.
+
+[B00UVHAC1O, B07RZ9L11P, B01AKWNMJI, B0BFWG2G5N, B0C364F6Y2, 
+B0C1C65H71, B07JPHKHXP, B0032JZODO, B08PB8ZTK1, B09P654NZ2]
+
+```{r}
+invalid_asin <- c("B00UVHAC1O", "B07RZ9L11P", "B01AKWNMJI", "B0BFWG2G5N", "B0C364F6Y2", "B0C1C65H71", "B07JPHKHXP", "B0032JZODO", "B08PB8ZTK1", "B09P654NZ2")
+
+new_data <- lapply(new_data, function(df) {
+  df <- filter(df, !(asin %in% invalid_asin))
+})
+
+View(new_data)
+```
+
+
+### 3. Create master data frame containing all info `all_tables`
+
+```{r}
+# concat
+all_tables <- bind_rows(new_data)
+total <- nrow(all_tables)
+
+# remove duplicates 
+all_tables <- all_tables[!duplicated(all_tables),]
+
+print(paste("Number of duplicate rows removed:", total - nrow(all_tables)))
+```
+
+
+```{r}
+glimpse(all_tables)
+```
+
+
+
+
+```{r save all_tables}
+# write data
+write.csv(all_tables, paste0(curr_path, "/data/cleaned/all_tables_cleaned.csv"), row.names = FALSE)
+
+
+# will give every item a row number for comparison of rankings later
+for (i in 1:length(new_data)) {
+  write.csv(new_data[[i]], paste0(curr_path, "/data/cleaned/", names(new_data)[[i]], "_cleaned.csv"), col.names = colnames(new_data[[i]]))
+}
+```
+
+

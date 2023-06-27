@@ -1,0 +1,546 @@
+---
+title: 'Report 1: Price, Sales, and Revenue'
+author: "Barbara Chen"
+date: "2023-06-08"
+editor_options:
+  markdown:
+    wrap: 72
+---
+This report will analyze the distribution of prices, sales, and revenue of 600 coffee table-related products on Amazon. The keywords used to gather these products are "_coffee table, nightstand, side table, end table, bedside table, sofa table, living room table, and accent table_". 
+
+The top 120 listings for each results were gathered from Helium10 Xray, which among many things, provided the sales and revenue estimations for each product. Because revenue is only an estimation from Helium10, it is not 100% reliable. This should be kept in mind for the rest of the analysis.
+
+The sponsored posts were removed. Duplicated listings (products which showed up for different search terms) were also removed.
+
+74 items did not have sales and revenue estimations, so those products were left out in the analyses related to sales and revenue.
+
+The goal is to determine if there is any correlation between price, sales, and revenue.
+
+## Conclusion
+
+1. There is no strong correlation between prices and sales, and prices and revenue. 
+
+#### Revenue
+1. 10% of the products generated much higher revenue ( > \$100,000) compared to the rest.
+2. 75% of the products generated less than \$56,000.
+5. 25% of the products generated less than \$11,000.
+
+#### Price
+1. 98% of the products are less than \$300. Anything more than that generated low revenue.
+2. Prices over \$160 could be considered too high,
+3. 75% of the products are less than \$90. The market for cheaper products (< \$90) could be really competitive.
+
+
+### Recommendations (for now...)
+1. Price of \$160 is considered very high compared with all the products (could be risky to have a product in this range).
+2. If aiming for mid-high prices, \$90~\$160 could be a good range. The products in this price range were *slightly* more likely to generate higher revenue. Moreover, there is less competition in this price range.
+3. If aiming for mid-low prices (<\$90), expect more competition.
+
+
+
+```{r include = FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r load libraries, include=FALSE}
+library(tidyverse)
+library(janitor)
+library(here)
+library(lubridate)
+library(dplyr)
+library(pivottabler)
+
+```
+
+```{r}
+options(scipen = 999)
+
+curr_path = here()
+path = paste0(curr_path, "/data/cleaned/all_tables_cleaned.csv")
+
+tables <- read.csv(path)
+```
+
+```{r}
+psr_df <- tables %>% select(asin, price, sales, revenue, brand, ratings, review_count, creation_date)
+psr_df <- mutate(psr_df, "log_rev"=log(revenue))
+```
+
+## 0. Overview of Price, Sales, and Revenue
+
+```{r warning=FALSE}
+ggplot(data = psr_df) +
+  geom_point(mapping = aes(x = price, y = sales), alpha = 0.5) +
+  geom_vline(xintercept = 450, color = 'red', linewidth = 0.5, linetype = "dashed") +
+  geom_hline(yintercept = 10000, color = 'red', linewidth = 0.5, linetype = "dashed") +
+  
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) +
+  scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
+  labs(title = "Price vs. Sales")
+```
+
+Here, we can clearly see a cluster in the lower left corner where the
+bulk of the data lies. For analysis later, we will zoom in to price \<
+\$450 and sales \< \$10,000.
+
+```{r warning=FALSE}
+ggplot(data = psr_df) +
+  geom_point(mapping = aes(x = price, y = revenue), alpha = 0.5) +
+  geom_vline(xintercept = 450, color = 'red', linewidth = 0.5, linetype = "dashed") +
+  geom_hline(yintercept = 250000, color = 'red', linewidth = 0.5, linetype = "dashed") +
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) +
+  scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
+
+  labs(title = "Price vs. Revenue")
+```
+
+Again, we see a cluster in the lower left corner. We will zoom in to
+price < $ 450 and revenue  < \$250,000.
+
+```{r warning=FALSE}
+ggplot(data = psr_df) +
+  geom_point(mapping = aes(x = sales, y = revenue), alpha = 0.5) +
+  geom_vline(xintercept = 10000, color = 'red', linewidth = 0.5, linetype = "dashed") +
+  geom_hline(yintercept = 250000, color = 'red', linewidth = 0.5, linetype = "dashed") +
+  
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) +
+  scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
+
+  labs(title = "Sales vs. Revenue")
+```
+
+
+The following will be the ranges we look at for the next part of the analysis.
+
+1.  Price \< \$450
+2.  Sales \< 10,000
+3.  Revenue \< \$250,000
+
+Anything outside will be considered extreme values, which will be
+further examined.
+
+### 0.1 Correlation
+
+```{r}
+round(cor(psr_df %>% filter(!is.na(sales)) %>% select(price, sales, revenue)),
+  digits = 2 # rounded to 2 decimals
+)
+```
+
+1. There is virtually no relationships between
+price and sales (-0.06), and price and revenue (-0.06). 
+
+2. There is a high correlation between sales and revenue (0.78), which is expected since high sales leads to high revenue.
+
+## 1. Revenue Distribution
+
+74 products were missing revenue information, so those products will not
+be included in this part of the analysis.
+
+```{r}
+rev_df <- psr_df %>% filter(!is.na(revenue))
+```
+
+```{r message=FALSE, warning=FALSE}
+ggplot(data = rev_df) +
+  geom_histogram(mapping = aes(x = revenue), color = 'white') +
+  geom_vline(xintercept = 250000, color = 'red', linewidth = 0.5, linetype = "dashed") +
+
+  labs(title = "Distribution of Product Revenue")
+```
+
+Again, we can see quite a few extremes (\>250000)
+
+**Records for which revenue > \$ 25000 will be removed (13 products).**
+They will be examine in more detail later along with actual outliers.
+
+```{r}
+r_upper_bound <- 250000
+# sum(rev_df$revenue > r_upper_bound)
+```
+
+### 1.1 Revenue (No Extremes)
+
+```{r warning=FALSE}
+in_range_revenue <- rev_df %>% filter(revenue <= r_upper_bound)
+
+ggplot(data = in_range_revenue) +
+  geom_histogram(mapping = aes(x = revenue), color = 'white', binwidth = 5000) +
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) +
+
+  labs(title = "Distribution of Product Revenue (No Extremes)")
+  
+```
+
+```{r}
+ggplot(data = in_range_revenue, aes(y = revenue)) +
+  geom_boxplot(outlier.shape = 8) +
+  coord_flip() +
+  scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
+
+  labs(title = "Distribution of Product Revenue (No Extremes)")
+```
+
+```{r}
+rq <- quantile(rev_df$revenue)
+rq
+```
+
+#### Observations
+
+1.  50% of the products generate less than $23,300.
+2.  The majority of the products (75%) make less than $56,000.
+
+* Later, we will group the products based on their revenue quartile.
+
+### 1.2 Revenue Outliers
+
+We see that revenue above \$ 124,388 would be considered
+outliers. Let's look at them in more detail.
+
+```{r}
+r_out <- rq[4] + 1.5 * (rq[4]-rq[2])
+print(paste0("Revenue outliers: > $", r_out))
+```
+
+```{r}
+ggplot(data = rev_df %>% filter(revenue > r_out)) +
+  geom_point(mapping = aes(x = price, y = sales, size = revenue), color = 10, alpha = 0.5) +
+  scale_x_continuous(breaks = scales::pretty_breaks(n=10)) +
+  scale_y_continuous(breaks = scales::pretty_breaks(n=10)) +
+  labs(title = "Price vs. Sales (Revenue Outliers)")
+```
+
+```{r}
+ggplot(data = rev_df %>% filter(revenue > r_out)) +
+  geom_point(mapping = aes(x = price, y = revenue, size = sales), color=10, alpha = 0.5) +
+  scale_x_continuous(breaks = scales::pretty_breaks(n=10)) +
+  scale_y_continuous(breaks = scales::pretty_breaks(n=10)) +
+  labs(title = "Price vs. Revenue (Revenue Outliers)")
+```
+
+#### Observations
+
+1.  We see a wide range of prices for products with extremely high
+    revenue (up to $280).
+2.  Most of the products here is still priced lower than \$ 150 (low
+    price + high sales = high revenue)
+
+## 2. Price Distribution
+
+```{r}
+prices_df <- psr_df
+```
+
+```{r message=FALSE}
+ggplot(data = prices_df) +
+  geom_histogram(mapping = aes(x = price), color = 'white') +
+  labs(title = "Distribution of Product Prices")
+```
+
+From this, we can clearly see some extreme values ( price \> \$ 450). We
+will go ahead and filter that out.
+
+**Products for which price > \$ 450 will be removed (12 products).**
+These will be examined in more detail later along with actual outliers.
+
+```{r}
+p_upper_bound <- 450
+sum(prices_df$price > p_upper_bound)
+```
+
+### 2.1 Prices (No Extremes)
+
+```{r}
+in_range_prices <- prices_df %>% filter(price <= p_upper_bound)
+
+ggplot(data = in_range_prices) +
+  geom_histogram(mapping = aes(x = price), binwidth = 10, color = 'white') +
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 20)) +
+
+  labs(title = "Distribution of Product Prices (No Extremes)")
+```
+
+```{r}
+ggplot(data = in_range_prices, aes(y=price)) + 
+  geom_boxplot(outlier.shape=8) + 
+  scale_y_continuous(breaks = scales::pretty_breaks(n = 20)) +
+  coord_flip() +
+  labs(title = "Distribution of Product Prices (No Extremes)")
+
+```
+
+Below is the five-number summary of the prices.
+
+```{r}
+pq <- quantile(prices_df$price)
+pq
+```
+
+#### Observations
+
+1.  The middle 50% of the data is around \$ 40 to \$ 90.
+2.  Top 25% of products is priced above \$ 90.
+3.  Technically, any products priced above \$ 160 would be considered an
+    outlier.
+
+### 2.2 Prices Outliers
+
+```{r}
+p_out <- pq[4] + 1.5 * (pq[4]-pq[2])
+print(paste0("Price outliers: > $", p_out))
+```
+
+```{r warning=FALSE}
+ggplot(data = prices_df %>% filter(price > p_out)) +
+  geom_point(mapping = aes(x = price, y = revenue, size = sales), color = 10, alpha = 0.5) +
+  scale_x_continuous(breaks = scales::pretty_breaks(n=10)) +
+  scale_y_continuous(breaks = scales::pretty_breaks(n=10)) +
+  labs(title = "Price vs. Revenue (Price Outliers)")
+```
+
+```{r warning=FALSE}
+ggplot(data = prices_df %>% filter(price < 1000 & price > p_out)) +
+  geom_point(mapping = aes(x = price, y = revenue, size = sales), color = 10, alpha = 0.5) +
+  scale_x_continuous(breaks = scales::pretty_breaks(n=10)) +
+  scale_y_continuous(breaks = scales::pretty_breaks(n=10)) +
+  labs(title = "Price vs. Revenue (Price Outliers)", subtitle = "price < $1000")
+```
+
+#### Observations
+
+1. Products with price \> \$1000 have extremely low revenue. In other
+    words, avoid listing products above \$1000.
+2. Products with price ranging from \$350 ~ \$550 have relatively lower revenue.
+3. Products with price < \$350 ~ \$550 have varying levels of revenue.
+
+## 3. Sales Distribution
+
+74 products were missing sales information, so those products will not be included in this part of the analysis.
+
+```{r}
+sales_df <- psr_df %>% filter(!is.na(sales))
+```
+
+```{r message=FALSE}
+ggplot(data = sales_df) +
+  geom_histogram(mapping = aes(x = sales), color = 'white') +
+  labs(title = "Distribution of Product Sales")
+```
+
+**Products in which number of sales \> 10000 will be removed (6
+products).** These will be examined in more detail later along with
+actual outliers.
+
+```{r}
+s_upper_bound <- 10000
+```
+
+### 3.1 Sales (No Extremes)
+
+```{r message=FALSE}
+in_range_sales <- sales_df %>% filter(sales <= s_upper_bound)
+sq <- quantile(sales_df$sales)
+ggplot(data = in_range_sales) +
+  geom_histogram(mapping = aes(x = sales), color = 'white') +
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 20)) +
+
+  labs(title = "Distribution of Product Sales (No Extremes)")
+  
+```
+
+```{r}
+ggplot(data = in_range_sales, aes(y=sales)) + 
+  geom_boxplot(outlier.shape=8) + 
+  scale_y_continuous(breaks = scales::pretty_breaks(n = 20)) +
+  coord_flip() +
+  labs(title = "Distribution of Product Sales (No Extremes)")
+
+```
+
+```{r}
+sq <-quantile(sales_df$sales)
+sq
+```
+
+#### Observations
+
+1.  Most products have lower number of sales (as expected...)
+2.  Middle 50% of the products have sales around 166 \~ 885.
+
+### 3.2 Sales Outliers
+
+Technically, we see that sales above 1,963 would be considered outliers.
+Let's look at them in more detail.
+
+```{r}
+s_out <- sq[4] + 1.5 * (sq[4] - sq[2])
+print(paste0("Sales outliers: > ", s_out))
+```
+
+```{r}
+ggplot(data = sales_df %>% filter(sales > s_out)) +
+  geom_point(mapping = aes(x = price, y = sales, size = revenue), color=10, alpha = 0.5) +
+  scale_x_continuous(breaks = scales::pretty_breaks(n=20)) +
+  labs(title = "Price vs. Sales (Sales Outliers)")
+```
+
+
+### 3.3 Observations
+1. We see a wide range of prices (all the way up to \$
+140). This shows that high price does not necessarily mean low sales. In
+fact, the higher priced items generate higher revenue despite lower
+sales.
+2. The products with the *highest* sales (\> 10,000) were all priced under \$
+50.
+
+## 4. Price, Sales, Revenue
+
+Now, we will examine the relationship between prices, sales and revenue.
+We will filter out price \> \$ 1000 since these products generate insignificant revenue.
+
+
+```{r}
+ggplot(data = rev_df %>% filter(price < 300 & sales < 10000)) +
+  geom_point(mapping = aes(x = price, y = sales, size = revenue), alpha = 0.2) +
+  scale_x_continuous(breaks = scales::pretty_breaks(n=10)) +
+  scale_y_continuous(breaks = scales::pretty_breaks(n=10)) +
+
+
+  labs(title = "Price, Sales, Revenue")
+```
+#### Observation
+1. As we already know, high sales = high revenue
+2. ALSO: low sales **+ higher price** = high revenue.
+3. We see that while products over \$100 have lower number of sales, they still generate relatively high revenue.
+
+
+### 4.1 Price vs. Revenue
+
+```{r}
+ggplot(data = rev_df %>% filter(price < 1000)) +
+  geom_point(mapping = aes(x = price, y = revenue), alpha = 0.5) +
+  # geom_vline(xintercept = 110, linetype = 'dashed', linewidth = 0.5, color = 'red') +
+  geom_hline(yintercept = rq[4], linetype = 'dashed', linewidth = 0.5, color = 'blue') +
+  # annotate(geom = 'text', label = "Revenue 75%", x = 350, y = 75000) +
+
+  labs(title = "Price vs. Revenue")
+```
+
+#### Observations
+
+1.  There is a clear cluster in terms of product price. The first
+    cluster is less than \$100, and the second is between \$100 and
+    \$300.
+2.  Products more than \$300 tend to have relatively low revenue
+    (with a couple exceptions).
+3.  If we just look at the top 25% revenue, we also see more products
+    less than \$100.
+
+## 5. Price Groups
+
+Earlier, we identified two clusters of price ranges. Based on the
+natural clustering and the quantiles, I decided to define three price ranges. 
+
+The lower price range is around \$0 to \$90. (lower 75% of the products)
+The second price range is around \$90 dollars to \$160. 
+The third range is \$160 and above. (outliers)
+
+Let's examine each of these groups.
+
+```{r}
+price_groups <- psr_df %>% 
+  mutate(price_group = case_when(
+    price <= 90 ~ '1', 
+    (price > 90 & price <= 160) ~'2',
+    TRUE ~'3'))
+price_groups <- price_groups %>% filter(!is.na(sales))
+```
+
+```{r warning=FALSE}
+ggplot(data = price_groups) +
+  geom_point(mapping = aes(x = price, y = revenue, color = price_group), alpha = 0.5) +
+  labs(title = "Price Groups")
+```
+
+```{r warning=FALSE}
+ggplot(data = price_groups %>% filter(price<450)) +
+  geom_point(mapping = aes(x = price, y = revenue, color = price_group), alpha = 0.5) +
+  labs(title = "Price Groups (no outliers)")
+```
+
+```{r}
+ggplot(price_groups, aes(price_group, fill = price_group)) + geom_bar() + 
+  scale_y_continuous(breaks = scales::pretty_breaks(n=10)) +
+  geom_text(stat='count', aes(label=..count..), vjust=-0.3)
+```
+Note that group 1 represents 75% of the data.
+```{r warning=FALSE}
+ggplot(data = price_groups, aes(x = price_group, y = revenue, fill = price_group)) + 
+  geom_boxplot(outlier.shape=8) + 
+  scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
+  coord_flip() +
+  labs(title = "Comparison of Revenue by Price Groups")
+
+```
+
+#### Observations
+1. By comparing the revenue of different groups, more products in group 2 (\$90 \~ \$160) generate higher revenue.
+2. Top 25% of the products in group 2 generated more than \$73,000 (compared to the overall 25% - \$56,000).
+
+```{r}
+price_groups %>% filter(!is.na(revenue)) %>% group_by(price_group) %>% 
+  summarize('listings' = n(),
+          min = quantile(revenue)[1],
+          '25%' = quantile(revenue)[2],
+          '50%' = quantile(revenue)[3],
+          '75%' = quantile(revenue)[4],
+          max = quantile(revenue)[5])
+```
+
+## 6. Revenue Groups
+
+We will analyze in terms of revenue quartiles:
+
+1. q1: <\$11,159 (lowest revenue group)
+2. q2: \$11,159 ~ \$23,319 
+3. q3: \$23,319 \~ \$56,450 
+4. q4: \> \$56,450 (highest revenue group)
+
+```{r}
+rev_groups <- price_groups %>% filter(!is.na(revenue)) %>% 
+  mutate(rev_group = case_when(
+    revenue <= rq[2] ~ 'q1', 
+    revenue > rq[2] & revenue <= rq[3] ~ 'q2', 
+    revenue > rq[3] & revenue <= rq[4] ~ 'q3',
+    TRUE ~'q4'))
+rev_groups <- rev_groups %>% filter(!is.na(sales))
+```
+
+```{r}
+ggplot(data = rev_groups %>% filter(price < 1000), aes(x = rev_group, y=price, fill = rev_group)) + 
+  geom_boxplot(outlier.shape=8) + 
+  scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
+  labs(title = "Comparison of Prices by Revenue Groups", caption = "For visualization purposes, price > $1000 are not shown. All such products fall in q1.") +
+  coord_flip()
+```
+
+```{r}
+pt <- PivotTable$new()
+pt$addData(rev_groups)
+pt$addColumnDataGroups("rev_group")
+pt$addRowDataGroups("price_group")
+pt$defineCalculation(calculationName="Total Listings", summariseExpression="n()")
+pt$renderPivot()
+
+pt_sum <- pt$asDataFrame()
+
+```
+
+
+#### Observations
+1. Higher revenue groups (q4, q3, and q2) have *slightly* more products above \$90 compared to the lowest revenue groups (q1).
+2. q3 and q2 have similar distribution.
+3. Products less than \$90 are almost equally likely to be in any revenue group.
+4. Products above \$90 are a little more likely to be in the higher revenue groups (q2, q3, q4)
+
