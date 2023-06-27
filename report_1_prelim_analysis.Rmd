@@ -1,12 +1,12 @@
 ---
-title: 'Report 1: Price, Sales, and Revenue'
+title: 'Report 1'
 author: "Barbara Chen"
 date: "2023-06-08"
 editor_options:
   markdown:
     wrap: 72
 ---
-This report will analyze the distribution of prices, sales, and revenue of 600 coffee table-related products on Amazon. The keywords used to gather these products are "_coffee table, nightstand, side table, end table, bedside table, sofa table, living room table, and accent table_". 
+This report will analyze the distribution of prices, sales, and revenue of 700 coffee table-related products on Amazon. The keywords used to gather these products are "_coffee table, nightstand, side table, end table, bedside table, sofa table, living room table, and accent table_". 
 
 The top 120 listings for each results were gathered from Helium10 Xray, which among many things, provided the sales and revenue estimations for each product. Because revenue is only an estimation from Helium10, it is not 100% reliable. This should be kept in mind for the rest of the analysis.
 
@@ -470,14 +470,14 @@ ggplot(data = price_groups %>% filter(price<450)) +
 ```
 
 ```{r}
-ggplot(price_groups, aes(price_group, fill = price_group)) + geom_bar() + 
+ggplot(price_groups, aes(price_group, fill = price_group)) + geom_bar(show.legend = FALSE) + 
   scale_y_continuous(breaks = scales::pretty_breaks(n=10)) +
   geom_text(stat='count', aes(label=..count..), vjust=-0.3)
 ```
 Note that group 1 represents 75% of the data.
 ```{r warning=FALSE}
 ggplot(data = price_groups, aes(x = price_group, y = revenue, fill = price_group)) + 
-  geom_boxplot(outlier.shape=8) + 
+  geom_boxplot(outlier.shape=8, show.legend = FALSE) + 
   scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
   coord_flip() +
   labs(title = "Comparison of Revenue by Price Groups")
@@ -489,13 +489,13 @@ ggplot(data = price_groups, aes(x = price_group, y = revenue, fill = price_group
 2. Top 25% of the products in group 2 generated more than \$73,000 (compared to the overall 25% - \$56,000).
 
 ```{r}
-price_groups %>% filter(!is.na(revenue)) %>% group_by(price_group) %>% 
-  summarize('listings' = n(),
-          min = quantile(revenue)[1],
-          '25%' = quantile(revenue)[2],
-          '50%' = quantile(revenue)[3],
-          '75%' = quantile(revenue)[4],
-          max = quantile(revenue)[5])
+# price_groups %>% filter(!is.na(revenue)) %>% group_by(price_group) %>% 
+#   summarize('listings' = n(),
+#           min = quantile(revenue)[1],
+#           '25%' = quantile(revenue)[2],
+#           '50%' = quantile(revenue)[3],
+#           '75%' = quantile(revenue)[4],
+#           max = quantile(revenue)[5])
 ```
 
 ## 6. Revenue Groups
@@ -519,21 +519,21 @@ rev_groups <- rev_groups %>% filter(!is.na(sales))
 
 ```{r}
 ggplot(data = rev_groups %>% filter(price < 1000), aes(x = rev_group, y=price, fill = rev_group)) + 
-  geom_boxplot(outlier.shape=8) + 
+  geom_boxplot(outlier.shape=8, show.legend = FALSE) + 
   scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
   labs(title = "Comparison of Prices by Revenue Groups", caption = "For visualization purposes, price > $1000 are not shown. All such products fall in q1.") +
   coord_flip()
 ```
 
 ```{r}
-pt <- PivotTable$new()
-pt$addData(rev_groups)
-pt$addColumnDataGroups("rev_group")
-pt$addRowDataGroups("price_group")
-pt$defineCalculation(calculationName="Total Listings", summariseExpression="n()")
-pt$renderPivot()
-
-pt_sum <- pt$asDataFrame()
+# pt <- PivotTable$new()
+# pt$addData(rev_groups)
+# pt$addColumnDataGroups("rev_group")
+# pt$addRowDataGroups("price_group")
+# pt$defineCalculation(calculationName="Total Listings", summariseExpression="n()")
+# pt$renderPivot()
+# 
+# pt_sum <- pt$asDataFrame()
 
 ```
 

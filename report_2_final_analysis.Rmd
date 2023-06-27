@@ -194,8 +194,8 @@ ggplot(rev_df, aes(x=search_term, fill = rev_group)) +
 6.  Good revenue (\>50% in q3 and q4): nightstand, bedside table, living room table
 
 ```{r}
-ggplot(rev_df %>% filter(price < 450 & revenue < 250000)) +
-  geom_point(aes(x = price, y = revenue, color = search_term), alpha = 0.5, show.legend = FALSE) + facet_wrap(~search_term, ncol = 4)
+# ggplot(rev_df %>% filter(price < 450 & revenue < 250000)) +
+#   geom_point(aes(x = price, y = revenue, color = search_term), alpha = 0.5, show.legend = FALSE) + facet_wrap(~search_term, ncol = 4)
 ```
 
 ```{r}
@@ -204,7 +204,7 @@ st_price$addData(rev_df)
 st_price$addColumnDataGroups("search_term")
 st_price$addRowDataGroups("price_group")
 st_price$defineCalculation(calculationName = "total listings", summariseExpression="n()")
-st_price$renderPivot()
+# st_price$renderPivot()
 
 ```
 
@@ -214,7 +214,7 @@ st_rev$addData(rev_df)
 st_rev$addColumnDataGroups("search_term")
 st_rev$addRowDataGroups("rev_group")
 st_rev$defineCalculation(calculationName = "total listings", summariseExpression="n()")
-st_rev$renderPivot()
+# st_rev$renderPivot()
 ```
 
 ### 1.3 Product Dimension (Depth, Width, Height)
@@ -243,34 +243,6 @@ ggplot(all_df %>% filter(!is.na(size_tier)), aes(x =search_term, y = vol_in, fil
 4.  For smaller items, go for nightstand, side table or bedside table.
 5.  Living room table has a pretty wide range of dimensions
 
-### 1.4 Package Size Tier
-
-```{r}
-ggplot(all_df, aes(x = search_term, fill = size_tier)) + geom_bar(position = 'fill') + coord_flip() +
-  labs(title = 'Size Tier by Search Term', y = 'percentage')
-```
-
-#### Observations
-
-1.  Most items are small oversize or large standard-size.
-
-```{r}
-rev_df %>% filter(!is.na(size_tier)) %>% group_by(size_tier) %>% 
-  summarize(count = n(), 
-            mean_rev = mean(revenue), 
-            med_rev = median(revenue), 
-            mean_price = mean(price),
-            med_price = median(price)) %>% arrange(-med_rev)
-```
-
-```{r warning=FALSE}
-ggplot(rev_df %>% filter(!is.na(size_tier) & size_tier %in% c('Large Standard-Size', 'Small Oversize', 'Medium Oversize') & search_term %in% c('1-coffee_table', '2-nightstand', '7-living_room_table'))) + 
-  geom_point(aes(x = price, y = revenue, color = search_term), alpha = 0.5) + facet_grid(~size_tier) + xlim(0, 450) + ylim(0, 250000)
-```
-
-#### Observations
-
-1.  Large Standard Size (the smallest size tier for these products) are all under \$100.
 
 ## 2. Page Comparisons
 
@@ -420,6 +392,58 @@ ggplot(all_df, aes(x=color_group)) +
 
 Compared to other search terms, living room table has a diverse range of products of different colors and materials (including plastic, glass, gold, etc.). These products tend to be more pricey but also generate higher revenue.
 
+
+Color breakdown of each search term. (Some products are duplicated, so ignore the total count for each color group. )
+
+```{r}
+color_st <- PivotTable$new()
+color_st$addData(unique_df)
+color_st$addColumnDataGroups("search_term")
+color_st$addRowDataGroups("color_group")
+color_st$defineCalculation(calculationName="Total Listings", summariseExpression="n()")
+# color_st$renderPivot()
+```
+
+```{r}
+# color_summary %>% filter(num_listings > 10) %>% arrange(-median_rev)
+```
+
+## 4. Revenue Groups
+
+To confirm the findings above, let's compare the revenue groups.
+
+
+```{r}
+ggplot(popular_colors, aes(x=color_group, fill = rev_group)) + 
+  geom_bar(position = position_fill(reverse=TRUE)) + 
+  coord_flip() + scale_y_continuous(breaks = scales::pretty_breaks(n=10) ) +
+  labs(title = "Revenue Breakdown of Popular Colors") + theme(axis.title.y = element_blank(), axis.text = element_text(size = 7)) + scale_fill_brewer(palette = 8)
+```
+
+Indeed, while brown/black is the most popular, it is not the best performing color considering it has the more products in q2 than other other revenue groups. In comparison, grey and grey/black has more products in q3 and q4 than other revenue groups. However, it also risky since it has quite a few products in q1.
+
+
+```{r}
+ggplot(rev_df, aes(x=search_term, fill = search_term)) + 
+  geom_bar(show.legend = FALSE) + 
+  geom_text(aes(label = after_stat(count)), stat="count", hjust = -0.2, size = 2) +
+  coord_flip() + facet_wrap(~rev_group, ncol = 2) +
+  labs(title = "Search Terms by Revenue Group") + theme(axis.title.y = element_blank(), axis.text = element_text(size = 7))
+```
+
+The best performing search terms are 'nightstand', 'bedside table', and 'living room table'.
+
+```{r message=FALSE}
+ggplot(rev_df, aes(x=price_group, fill = rev_group)) + 
+  geom_bar(stat="count", position = position_fill(reverse = TRUE)) + 
+  scale_y_continuous(breaks = scales::pretty_breaks(n=10) ) + 
+  coord_flip() +
+  scale_fill_brewer(palette=8) +
+  labs(title = "Revenue Breakdown of Price Groups", y = "percentage")
+```
+
+Price group 1 has average performance (almost uniform distribution among all revenue groups). Price group 2 has the best performance with almost 65% of products in q3 and q4 and only 15% of products in q1.
+
 ## Misc.
 
 Living room table vs coffee table -- They both have similar ratings and size distribution. They both contain more higher priced items. Despite their similarities, coffee table generates low revenue in comparison. Why is that?
@@ -448,54 +472,4 @@ b <- nrow(all_df %>% filter(price_group != '1' & search_term == '7-living_room_t
 
 print(paste("Percentage of 'living room table' products above $90 shown on page 1:", b/a))
 
-```
-
-Color breakdown of each search term. (Some products are duplicated, so ignore the total count for each color group. )
-
-```{r}
-color_st <- PivotTable$new()
-color_st$addData(unique_df)
-color_st$addColumnDataGroups("search_term")
-color_st$addRowDataGroups("color_group")
-color_st$defineCalculation(calculationName="Total Listings", summariseExpression="n()")
-color_st$renderPivot()
-```
-
-```{r}
-color_summary %>% filter(num_listings > 10) %>% arrange(-median_rev)
-
-```
-
-## 4. Revenue Groups
-
-```{r}
-ggplot(rev_df, aes(x=color_group)) + 
-  geom_bar() + 
-  geom_text(aes(label = after_stat(count)), stat="count", hjust = -0.2, size = 2) +
-  coord_flip() + facet_wrap(~rev_group, ncol = 2) +
-  labs(title = "Color Groups by Revenue Group") + theme(axis.title.y = element_blank(), axis.text = element_text(size = 7))
-```
-
-```{r}
-ggplot(popular_colors, aes(x=color_group, fill = rev_group)) + 
-  geom_bar(position = position_fill(reverse=TRUE)) + 
-  coord_flip() + scale_y_continuous(breaks = scales::pretty_breaks(n=10) ) +
-  labs(title = "Revenue Breakdown of Popular Colors") + theme(axis.title.y = element_blank(), axis.text = element_text(size = 7)) + scale_fill_brewer(palette = 8)
-```
-
-```{r}
-ggplot(rev_df, aes(x=search_term, fill = search_term)) + 
-  geom_bar() + 
-  geom_text(aes(label = after_stat(count)), stat="count", hjust = -0.2, size = 2) +
-  coord_flip() + facet_wrap(~rev_group, ncol = 2) +
-  labs(title = "Search Terms by Revenue Group") + theme(axis.title.y = element_blank(), axis.text = element_text(size = 7))
-```
-
-```{r message=FALSE}
-ggplot(rev_df, aes(x=price_group, fill = rev_group)) + 
-  geom_bar(stat="count", position = position_fill(reverse = TRUE)) + 
-  scale_y_continuous(breaks = scales::pretty_breaks(n=10) ) + 
-  coord_flip() +
-  scale_fill_brewer(palette=8) +
-  labs(title = "Revenue Breakdown of Price Groups", y = "percentage")
 ```
